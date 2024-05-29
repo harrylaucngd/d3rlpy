@@ -22,8 +22,7 @@ def run_experiment(env_name, algo_name):
 
     # Fit the model
     model.fit(dataset, 
-              n_steps=1000000,
-              n_steps_per_epoch=10000,
+              n_steps=100000,
               evaluators={"environment": d3rlpy.metrics.EnvironmentEvaluator(env)})
 
     # Evaluate the model (you can customize the evaluation here)
