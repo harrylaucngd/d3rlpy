@@ -7,7 +7,6 @@ from typing import (
     Generic,
     List,
     Optional,
-    Sequence,
     Tuple,
     TypeVar,
 )
@@ -190,42 +189,30 @@ class QLearningAlgoBase(
             * https://pytorch.org/tutorials/advanced/cpp_export.html (for C++).
             * https://onnx.ai (for ONNX)
 
-        Visit https://d3rlpy.readthedocs.io/en/stable/tutorials/after_training_policies.html#export-policies-as-torchscript for the further usage.
-
         Args:
             fname: Destination file path.
         """
         assert self._impl is not None, IMPL_NOT_INITIALIZED_ERROR
 
         if is_tuple_shape(self._impl.observation_shape):
-            dummy_x = [
-                torch.rand(1, *shape, device=self._device)
-                for shape in self._impl.observation_shape
-            ]
-            num_inputs = len(self._impl.observation_shape)
-        else:
-            dummy_x = torch.rand(
-                1, *self._impl.observation_shape, device=self._device
+            raise NotImplementedError(
+                "save_policy method does not support tuple observation yet."
             )
-            num_inputs = 1
+        dummy_x = torch.rand(
+            1, *self._impl.observation_shape, device=self._device
+        )
 
         # workaround until version 1.6
         self._impl.modules.freeze()
 
         # local function to select best actions
-        def _func(*x: Sequence[torch.Tensor]) -> torch.Tensor:
+        def _func(x: torch.Tensor) -> torch.Tensor:
             assert self._impl
 
-            observation: TorchObservation = x
-            if len(observation) == 1:
-                observation = observation[0]
-
             if self._config.observation_scaler:
-                observation = self._config.observation_scaler.transform(
-                    observation
-                )
+                x = self._config.observation_scaler.transform(x)
 
-            action = self._impl.predict_best_action(observation)
+            action = self._impl.predict_best_action(x)
 
             if self._config.action_scaler:
                 action = self._config.action_scaler.reverse_transform(action)
@@ -242,7 +229,7 @@ class QLearningAlgoBase(
                 fname,
                 export_params=True,
                 opset_version=11,
-                input_names=[f"input_{i}" for i in range(num_inputs)],
+                input_names=["input_0"],
                 output_names=["output_0"],
             )
         elif fname.endswith(".pt"):
@@ -613,7 +600,6 @@ class QLearningAlgoBase(
         random_steps: int = 0,
         eval_env: Optional[GymEnv] = None,
         eval_epsilon: float = 0.0,
-        eval_n_trials: int = 10,
         save_interval: int = 1,
         experiment_name: Optional[str] = None,
         with_timestamp: bool = True,
@@ -655,7 +641,7 @@ class QLearningAlgoBase(
 
         # create default replay buffer
         if buffer is None:
-            buffer = create_fifo_replay_buffer(1000000, env=env)
+            buffer = create_fifo_replay_buffer(1000000)
 
         # check action-space
         assert_action_space_with_env(self, env)
@@ -765,10 +751,7 @@ class QLearningAlgoBase(
                 # evaluation
                 if eval_env:
                     eval_score = evaluate_qlearning_with_environment(
-                        self,
-                        eval_env,
-                        n_trials=eval_n_trials,
-                        epsilon=eval_epsilon,
+                        self, eval_env, epsilon=eval_epsilon
                     )
                     logger.add_metric("evaluation", eval_score)
 

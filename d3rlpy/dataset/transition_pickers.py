@@ -1,9 +1,6 @@
-import dataclasses
-
 import numpy as np
 from typing_extensions import Protocol
 
-from ..types import Float32NDArray
 from .components import EpisodeBase, Transition
 from .utils import (
     create_zero_observation,
@@ -14,7 +11,6 @@ from .utils import (
 __all__ = [
     "TransitionPickerProtocol",
     "BasicTransitionPicker",
-    "SparseRewardTransitionPicker",
     "FrameStackTransitionPicker",
     "MultiStepTransitionPicker",
 ]
@@ -67,40 +63,6 @@ class BasicTransitionPicker(TransitionPickerProtocol):
             interval=1,
             rewards_to_go=episode.rewards[index:],
         )
-
-
-class SparseRewardTransitionPicker(TransitionPickerProtocol):
-    r"""Sparse reward transition picker.
-
-    This class extends BasicTransitionPicker to handle special returns_to_go
-    calculation mainly used in AntMaze environments.
-
-    For the failure trajectories, this class sets the constant return value to
-    avoid inconsistent horizon due to time out.
-
-    Args:
-        failure_return (int): Return value for failure trajectories.
-        step_reward (float): Immediate step reward value in sparse reward
-            setting.
-    """
-
-    def __init__(self, failure_return: float, step_reward: float = 0.0):
-        self._failure_return = failure_return
-        self._step_reward = step_reward
-        self._transition_picker = BasicTransitionPicker()
-
-    def __call__(self, episode: EpisodeBase, index: int) -> Transition:
-        transition = self._transition_picker(episode, index)
-        if np.all(transition.rewards_to_go == self._step_reward):
-            extended_rewards_to_go: Float32NDArray = np.array(
-                [[self._failure_return]],
-                dtype=np.float32,
-            )
-            transition = dataclasses.replace(
-                transition,
-                rewards_to_go=extended_rewards_to_go,
-            )
-        return transition
 
 
 class FrameStackTransitionPicker(TransitionPickerProtocol):

@@ -389,7 +389,6 @@ def get_d4rl(
     transition_picker: Optional[TransitionPickerProtocol] = None,
     trajectory_slicer: Optional[TrajectorySlicerProtocol] = None,
     render_mode: Optional[str] = None,
-    max_episode_steps: int = 1000,
 ) -> Tuple[ReplayBuffer, gym.Env[NDArray, NDArray]]:
     """Returns d4rl dataset and envrironment.
 
@@ -411,17 +410,12 @@ def get_d4rl(
         transition_picker: TransitionPickerProtocol object.
         trajectory_slicer: TrajectorySlicerProtocol object.
         render_mode: Mode of rendering (``human``, ``rgb_array``).
-        max_episode_steps: Maximum episode environmental steps.
 
     Returns:
         tuple of :class:`d3rlpy.dataset.ReplayBuffer` and gym environment.
     """
     try:
-        import d4rl
-        from d4rl.locomotion.wrappers import NormalizedBoxEnv
-        from d4rl.utils.wrappers import (
-            NormalizedBoxEnv as NormalizedBoxEnvFromUtils,
-        )
+        import d4rl  # type: ignore
 
         env = gym.make(env_name)
         raw_dataset: Dict[str, NDArray] = env.get_dataset()  # type: ignore
@@ -442,17 +436,11 @@ def get_d4rl(
             trajectory_slicer=trajectory_slicer,
         )
 
-        # remove incompatible wrappers
-        normalized_env = env.env.env.env  # type: ignore
-        assert isinstance(
-            normalized_env, (NormalizedBoxEnv, NormalizedBoxEnvFromUtils)
-        )
-        unwrapped_env: gym.Env[Any, Any] = normalized_env.wrapped_env
+        # wrapped by NormalizedBoxEnv that is incompatible with newer Gym
+        unwrapped_env: gym.Env[Any, Any] = env.env.env.env.wrapped_env  # type: ignore
         unwrapped_env.render_mode = render_mode  # overwrite
 
-        return dataset, TimeLimit(
-            normalized_env, max_episode_steps=max_episode_steps
-        )
+        return dataset, TimeLimit(unwrapped_env, max_episode_steps=1000)
     except ImportError as e:
         raise ImportError(
             "d4rl is not installed.\n" "$ d3rlpy install d4rl"
