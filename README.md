@@ -1,5 +1,13 @@
 <p align="center"><img align="center" width="300px" src="assets/logo.png"></p>
 
+# TODO
+
+- [x] A new model SAC-N
+- [x] dataset triming based on trajectory return
+- [x] dataset triming pipeline based on OOD-D
+- [ ] check the encoder model and method, maybe a strong encoder model
+- [ ] evaluation metric of the performance
+
 # d3rlpy: An offline deep reinforcement learning library
 
 ![test](https://github.com/takuseno/d3rlpy/workflows/test/badge.svg)
