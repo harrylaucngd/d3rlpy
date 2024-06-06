@@ -1,6 +1,7 @@
 *.pyc
 *__pycache__
 *.pkl
+*.pt
 *.c
 *.cpp
 *.so
@@ -21,3 +22,5 @@ build
 dist
 /.idea/
 *.egg-info
+.lh/
+wandb/
