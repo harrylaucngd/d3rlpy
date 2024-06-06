@@ -1,98 +1,92 @@
+import random
 import torch
 import torch.nn as nn
+from torch import optim
 import torch.nn.functional as F
 
-class AutoEncoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, latent_dim):
-        super(AutoEncoder, self).__init__()
-        
-        # Encoder layers
-        self.enc_lstm = nn.LSTM(input_dim, hidden_dim, batch_first=True)
-        self.enc_bn1 = nn.BatchNorm1d(input_dim)
-        self.enc_nonlinear = nn.ReLU()  # Non-linear activation
-        self.enc_fc = nn.Linear(hidden_dim, latent_dim)
-        self.enc_bn2 = nn.BatchNorm1d(latent_dim)
-        self.dropout = nn.Dropout(p=0.3)
-        
-        # Decoder layers
-        self.dec_fc = nn.Linear(latent_dim, hidden_dim)
-        self.dec_bn1 = nn.BatchNorm1d(hidden_dim)
-        self.dec_nonlinear = nn.ReLU()  # Non-linear activation
-        self.dec_lstm = nn.LSTM(hidden_dim, input_dim, batch_first=True)
-        self.dec_bn2 = nn.BatchNorm1d(input_dim)
 
-    def encode(self, x):
-        batch_size, seq_len, _ = x.size()
-        x = x.reshape(batch_size * seq_len, -1)
-        x = self.enc_bn1(x)
-        x = x.reshape(batch_size, seq_len, -1)
-        _, (h, _) = self.enc_lstm(x)
-        h = h.squeeze(0)
-        h = self.enc_nonlinear(h)  # Apply non-linear activation
-        z = self.enc_fc(h)
-        z = self.enc_bn2(z)
-        z = self.dropout(z)
-        return z
-    
-    def decode(self, z, seq_len):
-        h = self.dec_fc(z).unsqueeze(0).repeat(seq_len, 1, 1).transpose(0, 1)
-        batch_size, seq_len, _ = h.size()
+class lstm_encoder(nn.Module):
+    ''' Encodes time-series sequence '''
+
+    def __init__(self, input_size, hidden_size, num_layers=2):
+        super(lstm_encoder, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+
+        # define LSTM layer
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,dropout=0.1)
+
+    def forward(self, x_input):
+        lstm_out, self.hidden = self.lstm(x_input.view(x_input.shape[0], x_input.shape[1], self.input_size))
+        return lstm_out, self.hidden
+
+    def init_hidden(self, batch_size):
+        return (torch.zeros(self.num_layers, batch_size, self.hidden_size),
+                torch.zeros(self.num_layers, batch_size, self.hidden_size))
+
+
+class lstm_decoder(nn.Module):
+    ''' Decodes hidden state output by encoder '''
+
+    def __init__(self, input_size, hidden_size, num_layers=2):
+        super(lstm_decoder, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,dropout=0.1)
+        self.linear = nn.Linear(hidden_size, input_size)
+
+    def forward(self, x_input, encoder_hidden_states):
+        lstm_out, self.hidden = self.lstm(x_input.unsqueeze(0), encoder_hidden_states)
+        output = self.linear(lstm_out.squeeze(0))
+        return output, self.hidden
+
+
+class lstm_seq2seq(nn.Module):
+    ''' train LSTM encoder-decoder and make predictions '''
+
+    def __init__(self, input_size, hidden_size):
+        super(lstm_seq2seq, self).__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+
+        self.encoder = lstm_encoder(input_size=input_size, hidden_size=hidden_size)
+        self.decoder = lstm_decoder(input_size=input_size, hidden_size=hidden_size)
+
+    def forward(self, input_batch,target_batch, training_prediction='recursive', teacher_forcing_ratio=0.5):
+        batch_size = input_batch.shape[1]
+        target_len = target_batch.shape[0]
+        outputs = torch.zeros(target_len, batch_size, self.input_size)
+        
+        encoder_hidden = self.encoder.init_hidden(batch_size)
+        encoder_output, encoder_hidden = self.encoder(input_batch)
         # import pdb; pdb.set_trace()
-        h = h.reshape(batch_size * seq_len, -1)
-        h = self.dec_bn1(h)
-        h = h.reshape(batch_size, seq_len, -1)
-        h = self.dec_nonlinear(h)  # Apply non-linear activation
-        output, _ = self.dec_lstm(h)
-        output = output.reshape(batch_size * seq_len, -1)
-        output = self.dec_bn2(output)
-        output = output.reshape(batch_size, seq_len, -1)
-        return output
+        decoder_input = input_batch[-1, :, :]
+        decoder_hidden = encoder_hidden
+        if training_prediction == 'recursive':
+            for t in range(target_len):
+                decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+                outputs[t] = decoder_output
+                decoder_input = decoder_output
 
-    def forward(self, x):
-        seq_len = x.size(1)
-        z = self.encode(x)
-        out = self.decode(z, seq_len)
-        return out
+        elif training_prediction == 'teacher_forcing':
+            for t in range(target_len):
+                decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+                outputs[t] = decoder_output
+                if random.random() < teacher_forcing_ratio:
+                    decoder_input = target_batch[t, :, :]
+                else:
+                    decoder_input = decoder_output
 
+        elif training_prediction == 'mixed_teacher_forcing':
+            for t in range(target_len):
+                decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+                outputs[t] = decoder_output
+                if random.random() < teacher_forcing_ratio:
+                    decoder_input = target_batch[t, :, :]
+                else:
+                    decoder_input = decoder_output
 
-
-# 定义变分自编码器模型
-class VAE(nn.Module):
-    def __init__(self, input_dim, hidden_dim, latent_dim):
-        super(VAE, self).__init__()
-        self.hidden_dim = hidden_dim
-        self.latent_dim = latent_dim
-
-        # 编码器部分
-        self.encoder_rnn = nn.LSTM(input_dim, hidden_dim, batch_first=True)
-        self.fc_mu = nn.Linear(hidden_dim, latent_dim)
-        self.fc_logvar = nn.Linear(hidden_dim, latent_dim)
-
-        # 解码器部分
-        self.decoder_input = nn.Linear(latent_dim, hidden_dim)
-        self.decoder_rnn = nn.LSTM(hidden_dim, input_dim, batch_first=True)
-
-    def encode(self, x):
-        _, (h, _) = self.encoder_rnn(x)
-        h = h.squeeze(0)
-        mu = self.fc_mu(h)
-        logvar = self.fc_logvar(h)
-        return mu, logvar
-
-    def reparameterize(self, mu, logvar):
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-        return mu + eps * std
-
-    def decode(self, z, seq_len):
-        h = self.decoder_input(z).unsqueeze(0).repeat(seq_len, 1, 1).transpose(0, 1)
-        output, _ = self.decoder_rnn(h)
-        return output
-
-    def forward(self, x):
-        
-        seq_len = x.size(1)
-        mu, logvar = self.encode(x)
-        z = self.reparameterize(mu, logvar)
-        reconstructed = self.decode(z, seq_len)
-        return reconstructed, mu, logvar
+        return outputs
