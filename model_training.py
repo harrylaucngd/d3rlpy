@@ -24,7 +24,7 @@ if args.device > 0:
     device = torch.device(f"cuda:{args.device}")
 
 # 参数设定
-input_dim = 15  # 每个时间步的向量维度
+input_dim = 24  # 每个时间步的向量维度
 hidden_dim = 128  # 隐藏层维度
 latent_dim = 64  # 自编码器学习的低维表示
 batch_size = 256  # 批处理大小
@@ -50,7 +50,7 @@ set_seed(42)
 
 def prepare_data():
     dataset, _ = d3rlpy.datasets.get_dataset(args.dataset)
-    dataset._buffer = dataset._buffer[:20000]
+    dataset._buffer = dataset._buffer[:]
 
     traj_num = len(dataset._buffer)
     action_size = dataset._dataset_info.action_signature.shape[0][0]
@@ -106,7 +106,7 @@ def loss_function(reconstructed, x, mu, logvar, mask=None):
 
 # 训练变分自编码器
 if args.train_from_scratch:
-    num_epochs = 100
+    num_epochs = 200
     model.to(args.device)
 
     best_val_loss = float('inf')
