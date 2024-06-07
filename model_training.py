@@ -11,12 +11,12 @@ import argparse
 parser = argparse.ArgumentParser(description='VAE Trajectory Data')
 parser.add_argument("--use_wandb", action="store_true", help="Use Weights & Biases for logging")
 parser.add_argument("--device", type=int, default=0)
-parser.add_argument("--model_name", type=str, default="halfcheetah_ae", help="Name of the model")
-parser.add_argument("--dataset", type=str, default="halfcheetah-medium-replay-v0", help="Name of the dataset")
+parser.add_argument("--model_name", type=str, default="hopper_ae", help="Name of the model")
+parser.add_argument("--dataset", type=str, default="hopper-medium-replay-v0", help="Name of the dataset")
 parser.add_argument("--dataset_size", type=int, default=-1, help="Size of the dataset,if -1 use all data")
 parser.add_argument("--model_type", type=str, default="autoencoder", help="Type of the model")
 parser.add_argument("--train_from_scratch", action="store_true", help="Train the model from scratch")
-parser.add_argument("--seq_len", type=int, default=2, help="Load the model from the saved model")
+parser.add_argument("--seq_len", type=int, default=10, help="Load the model from the saved model")
 args = parser.parse_args()
 if args.use_wandb:
     wandb.init(project="vae-trajectory")
@@ -26,7 +26,7 @@ if args.device > 0:
     device = torch.device(f"cuda:{args.device}")
 
 # 参数设定
-input_dim = 24  # 每个时间步的向量维度
+input_dim = 15  # 每个时间步的向量维度
 hidden_dim = 128  # 隐藏层维度
 latent_dim = 64  # 自编码器学习的低维表示
 batch_size = 256  # 批处理大小
@@ -52,13 +52,6 @@ set_seed(42)
 
 def prepare_data():
     dataset, _ = d3rlpy.datasets.get_dataset(args.dataset)
-<<<<<<< HEAD
-    dataset._buffer = dataset._buffer[:]
-
-    traj_num = len(dataset._buffer)
-    action_size = dataset._dataset_info.action_signature.shape[0][0]
-    obs_size = dataset._dataset_info.observation_signature.shape[0][0]
-=======
     if args.dataset_size != -1:
         traj_dataset = dataset._buffer._episodes[:args.dataset_size]
     else:
@@ -66,7 +59,6 @@ def prepare_data():
     traj_num = len(traj_dataset)
     action_size = traj_dataset[0].actions.shape[-1]
     obs_size = traj_dataset[0].observations.shape[-1]
->>>>>>> 7fc6dc0702091262b39a59c0c73cdcd6213d8394
 
     print(f"Number of trajectories: {traj_num}")
     all_traj_repsentations = []
@@ -81,7 +73,7 @@ def prepare_data():
             traj_representation = torch.cat((obs, action,reward), dim=-1)
             all_traj_repsentations.append(traj_representation)
     dataset = VariableLengthDataset(all_traj_repsentations)
-    
+
     # 数据集划分
     train_size = int(0.8 * len(dataset))
     val_size = int(0.1 * len(dataset))
@@ -97,9 +89,7 @@ train_loader, val_loader, test_loader = prepare_data()
 
 
 # 初始化模型、损失函数和优化器
-if args.model_type == "vae":
-    model = VAE(input_dim, hidden_dim, latent_dim)
-elif args.model_type == "autoencoder":
+if args.model_type == "autoencoder":
     model = lstm_seq2seq(input_dim, hidden_dim)
     
 reconstruction_loss = nn.MSELoss()
@@ -166,7 +156,7 @@ if args.train_from_scratch:
                 elif args.model_type == "autoencoder":
                     batch_trajectories = batch_trajectories.permute(1,0,2)
                 
-                    reconstructed = model(input_batch=batch_trajectories,target_batch=batch_trajectories, training_prediction='recursive', teacher_forcing_ratio=0.5).to(args.device)
+                    reconstructed = model(input_batch=batch_trajectories,target_batch=batch_trajectories, training_prediction='teacher_forcing', teacher_forcing_ratio=0.5).to(args.device)
                     
                     
                     reconstructed = reconstructed.permute(1,0,2)
@@ -201,7 +191,7 @@ if args.train_from_scratch:
                 loss = loss_function(reconstructed, batch_trajectories, mu, logvar,mask)
             elif args.model_type == "autoencoder":
                 batch_trajectories = batch_trajectories.permute(1,0,2)
-                reconstructed = model(input_batch=batch_trajectories,target_batch=batch_trajectories, training_prediction='recursive', teacher_forcing_ratio=0.5).to(args.device)
+                reconstructed = model(input_batch=batch_trajectories,target_batch=batch_trajectories, training_prediction='teacher_forcing', teacher_forcing_ratio=0.5).to(args.device)
                 reconstructed = reconstructed.permute(1,0,2)
                 batch_trajectories = batch_trajectories.permute(1,0,2)
                 mask_reconstructed = reconstructed*mask
