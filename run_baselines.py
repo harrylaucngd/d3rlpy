@@ -3,6 +3,7 @@ from d3rlpy.datasets import get_d4rl
 import numpy as np
 from sklearn.neighbors import KernelDensity
 from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import StandardScaler
 
 # Define the environments and algorithms
 # environments = ['hopper', 'halfcheetah', 'walker2d']
@@ -36,6 +37,8 @@ def run_experiment(env_name, algo_name):
         list_of_states.append(episode.observations)
     all_states = np.vstack(list_of_states)
     print(f"all_states: {all_states.shape}")
+    scaler = StandardScaler()
+    states_normalized = scaler.fit_transform(all_states)
 
     # params = {'bandwidth': np.logspace(-1, 0, 2)}
     # print(f"params: {params}")
@@ -47,26 +50,37 @@ def run_experiment(env_name, algo_name):
     # print(f"best_bandwidth: {best_bandwidth}")
     # exit()
 
-    kde = KernelDensity(kernel='gaussian', bandwidth=0.5).fit(all_states)
+    for bandwidth in np.linspace(0.3, 0.5, 10):
+        print(f"bandwidth: {bandwidth}")
+        kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(states_normalized)
 
+        count_list = []
+        for i in range(100):
+            if i == 0:
+                state = np.random.randn(17)  # Replace with your new state to estimate density
+            # Step 4: Calculate the density for a new state
+            else:
+                state = dataset.sample_transition().next_observation
+            # print(f"state: {state}")
+            state_normalized = scaler.transform(state.reshape(1, -1))
+            # print(f"state_normalized: {state_normalized}")
+            # state = np.random.randn(17)
+            log_density = kde.score_samples(state_normalized.reshape(1, -1))
+            density = np.exp(log_density)
 
-    for i in range(10):
-        # Step 4: Calculate the density for a new state
-        state = dataset.episodes[0].observations[i, :]  # Replace with your new state to estimate density
-        print(f"state: {state}")
-        # state = np.random.randn(17)
-        log_density = kde.score_samples(state.reshape(1, -1))
-        density = np.exp(log_density)
+            # Step 5: Compute pseudo-counts
+            pseudo_count = density * all_states.shape[0]
+            if i != 0:
+                count_list.append(pseudo_count)
 
-        # Step 5: Compute pseudo-counts
-        pseudo_count = density
+            # Step 6: Calculate exploration bonus
+            exploration_bonus = 1.0 / np.sqrt(pseudo_count)
 
-        # Step 6: Calculate exploration bonus
-        exploration_bonus = 1.0 / np.sqrt(pseudo_count)
-
-        print(f"Density: {density}")
-        print(f"Pseudo-Count: {pseudo_count}")
-        print(f"Exploration Bonus: {exploration_bonus}")
+            # print(f"Density: {density}")
+            # print(f"Pseudo-Count: {pseudo_count}")
+            # print(f"Exploration Bonus: {exploration_bonus}")
+        print(f"mean count: {np.mean(count_list)}, std count: {np.std(count_list)}, ratio: {np.std(count_list) / np.mean(count_list)}")
+        # print(f"std count: {np.std(count_list)}")
     exit()
 
 
