@@ -40,6 +40,29 @@ def run_experiment(env_name, algo_name):
     scaler = StandardScaler()
     states_normalized = scaler.fit_transform(all_states)
 
+    bandwidth = 0.4  # best bandwidth, making pseudo count ~ 4, maximizing the rate of std_count / mean_count
+    alpha = 0.5
+    kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(states_normalized)
+    print(f"total episode: {len(dataset.episodes)}")
+    for i, episode in enumerate(dataset.episodes):
+        print(f"i: {i}")
+        print(f"np.mean(episode.rewards): {np.mean(episode.rewards)}")
+        mean_abs_reward = np.mean(np.abs(episode.rewards))
+        # for i in range(episode.size() - 1):
+        next_observations = episode.observations[1:, :]
+        # print(f"next_observations: {next_observations.shape}")
+        states_normalized = scaler.transform(next_observations)
+        # print(f"states_normalized: {states_normalized.shape}")
+        log_density = kde.score_samples(states_normalized)
+        # print(f"log_density: {log_density.shape}")
+        density = np.exp(log_density)
+        pseudo_count = density * all_states.shape[0]
+        exploration_bonus = 1.0 / np.sqrt(pseudo_count)
+        # print(f"exploration_bonus: {exploration_bonus.shape}")
+        # print(f"episode.rewards: {episode.rewards.shape}")
+        episode.rewards[:-1, :] += np.reshape(alpha * (exploration_bonus / 0.5 * mean_abs_reward), (-1, 1))
+        print(f"np.mean(episode.rewards): {np.mean(episode.rewards)}")
+
     # params = {'bandwidth': np.logspace(-1, 0, 2)}
     # print(f"params: {params}")
     # grid = GridSearchCV(KernelDensity(), params)
@@ -49,40 +72,6 @@ def run_experiment(env_name, algo_name):
     # best_bandwidth = grid.best_estimator_.bandwidth
     # print(f"best_bandwidth: {best_bandwidth}")
     # exit()
-
-    for bandwidth in np.linspace(0.3, 0.5, 10):
-        print(f"bandwidth: {bandwidth}")
-        kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(states_normalized)
-
-        count_list = []
-        for i in range(100):
-            if i == 0:
-                state = np.random.randn(17)  # Replace with your new state to estimate density
-            # Step 4: Calculate the density for a new state
-            else:
-                state = dataset.sample_transition().next_observation
-            # print(f"state: {state}")
-            state_normalized = scaler.transform(state.reshape(1, -1))
-            # print(f"state_normalized: {state_normalized}")
-            # state = np.random.randn(17)
-            log_density = kde.score_samples(state_normalized.reshape(1, -1))
-            density = np.exp(log_density)
-
-            # Step 5: Compute pseudo-counts
-            pseudo_count = density * all_states.shape[0]
-            if i != 0:
-                count_list.append(pseudo_count)
-
-            # Step 6: Calculate exploration bonus
-            exploration_bonus = 1.0 / np.sqrt(pseudo_count)
-
-            # print(f"Density: {density}")
-            # print(f"Pseudo-Count: {pseudo_count}")
-            # print(f"Exploration Bonus: {exploration_bonus}")
-        print(f"mean count: {np.mean(count_list)}, std count: {np.std(count_list)}, ratio: {np.std(count_list) / np.mean(count_list)}")
-        # print(f"std count: {np.std(count_list)}")
-    exit()
-
 
     # exit()
     # print(dataset.episodes[0].rewards[0])
