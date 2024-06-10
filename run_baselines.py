@@ -1,3 +1,4 @@
+import argparse
 import d3rlpy
 from d3rlpy.datasets import get_d4rl
 import numpy as np
@@ -11,7 +12,7 @@ environments = ['halfcheetah']
 # algorithms = ['cql', 'bcq', 'iql']
 algorithms = ['bcq']
 
-def run_experiment(env_name, algo_name):
+def run_experiment(env_name, algo_name, args):
     # Load the dataset
     dataset_name = f'{env_name}-medium-replay-v0'
     dataset, env = get_d4rl(dataset_name)
@@ -41,7 +42,7 @@ def run_experiment(env_name, algo_name):
     states_normalized = scaler.fit_transform(all_states)
 
     bandwidth = 0.4  # best bandwidth, making pseudo count ~ 4, maximizing the rate of std_count / mean_count
-    alpha = 0.5
+    alpha = args.alpha
     kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(states_normalized)
     print(f"total episode: {len(dataset.episodes)}")
     for i, episode in enumerate(dataset.episodes):
@@ -84,13 +85,19 @@ def run_experiment(env_name, algo_name):
     model.fit(dataset,
               n_steps=1000000,
               n_steps_per_epoch=10000,
-              evaluators={"environment": d3rlpy.metrics.EnvironmentEvaluator(env)})
+              evaluators={"environment": d3rlpy.metrics.EnvironmentEvaluator(env)},
+              experiment_name=f"{env_name}-{algo_name}-{args.run_name}")
 
     # Evaluate the model (you can customize the evaluation here)
     # For instance, you might want to use a separate evaluation environment or dataset.
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Run D3RLPy experiment')
+    parser.add_argument('--run_name', type=str)
+    parser.add_argument('--alpha', type=float, default=0.5)
+    args = parser.parse_args()
+
     for env in environments:
         for algo in algorithms:
             print(f"Starting experiment for {env} with {algo}")
-            run_experiment(env, algo)
+            run_experiment(env, algo, args)
