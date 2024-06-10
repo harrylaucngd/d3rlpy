@@ -39,7 +39,7 @@ def run_experiment(env_name, algo_name):
     print(f"total episode: {len(dataset.episodes)}")
     for i, episode in enumerate(dataset.episodes):
         print(f"i: {i}")
-        print(f"np.mean(episode.rewards): {np.mean(episode.rewards)}")
+        print(f"before change reward: {np.mean(episode.rewards)}")
         mean_abs_reward = np.mean(np.abs(episode.rewards))
         next_observations = episode.observations[1:, :]
         states_normalized = scaler.transform(next_observations)
@@ -48,7 +48,7 @@ def run_experiment(env_name, algo_name):
         pseudo_count = density * all_states.shape[0]
         exploration_bonus = 1.0 / (np.sqrt(pseudo_count) + epsilon)
         episode.rewards[:-1, :] += np.reshape(alpha * (exploration_bonus / 0.5 * mean_abs_reward), (-1, 1))
-        print(f"np.mean(episode.rewards): {np.mean(episode.rewards)}")
+        print(f"after change reward: {np.mean(episode.rewards)}")
 
     # Fit the model
     model.fit(dataset,
