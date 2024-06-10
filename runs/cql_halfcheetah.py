@@ -1,5 +1,5 @@
 import argparse
-from utils import get_trimmed_dataset
+from utils import get_trimmed_dataset, get_generated_dataset
 
 import d3rlpy
 
@@ -12,7 +12,8 @@ def main(keep_ratio = 0.5) -> None:
     args = parser.parse_args()
 
     dataset, env = d3rlpy.datasets.get_dataset(args.dataset)
-    dataset = get_trimmed_dataset(args.dataset, keep_ratio)
+    # dataset = get_trimmed_dataset(args.dataset, keep_ratio)
+    dataset = get_generated_dataset(args.dataset, keep_ratio)
 
     # fix seed
     d3rlpy.seed(args.seed)
@@ -39,14 +40,14 @@ def main(keep_ratio = 0.5) -> None:
 
     cql.fit(
         dataset,
-        n_steps=500000,
+        n_steps=150000,
         n_steps_per_epoch=1000,
         save_interval=10,
         evaluators={"environment": d3rlpy.metrics.EnvironmentEvaluator(env)},
-        experiment_name=f"CQL_{args.dataset}_{keep_ratio}_{args.seed}",
+        experiment_name=f"CQL_{args.dataset}_Generated_{keep_ratio}_{args.seed}",
     )
 
 
 if __name__ == "__main__":
-    for keep_ratio in [0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55, 0.5]:
+    for keep_ratio in [0.05, 0.1]:
         main(keep_ratio)

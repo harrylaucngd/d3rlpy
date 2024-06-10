@@ -51,3 +51,23 @@ def get_trimmed_dataset(dataset, keep_ratio):
         timeouts=timeouts,
     )
     return dataset
+
+
+def get_generated_dataset(dataset, keep_ratio):
+    name = f"generated_datasets/{dataset}_Reconstructed_{keep_ratio}.hdf5"
+    raw_dataset: dict[str, np.ndarray] = get_dataset(name)  # type: ignore
+
+    observations = raw_dataset["observations"]
+    actions = raw_dataset["actions"]
+    rewards = raw_dataset["rewards"]
+    terminals = raw_dataset["terminals"]
+    timeouts = raw_dataset["timeouts"]
+
+    dataset = MDPDataset(
+        observations=observations,
+        actions=actions,
+        rewards=rewards,
+        terminals=terminals,
+        timeouts=timeouts,
+    )
+    return dataset

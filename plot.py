@@ -106,6 +106,27 @@ reference_table = {
     "SAC-N_walker2d": "SAC_walker2d-medium-replay-v0_1_20240601163548",
 }
 
+lstm_table = {
+    "BCQ_hopper_0.1": "BCQ_hopper-medium-replay-v0_Generated_0.1_1_20240610025611",
+    "BCQ_hopper_0.05": "BCQ_hopper-medium-replay-v0_Generated_0.05_1_20240610015315",
+    "BCQ_halfcheetah_0.1": "BCQ_halfcheetah-medium-replay-v0_Generated_0.1_1_20240610031052",
+    "BCQ_halfcheetah_0.05": "BCQ_halfcheetah-medium-replay-v0_Generated_0.05_1_20240610015311",
+    "BCQ_walker2d_0.1": "BCQ_walker2d-medium-replay-v0_Generated_0.1_1_20240610025710",
+    "BCQ_walker2d_0.05": "BCQ_walker2d-medium-replay-v0_Generated_0.05_1_20240610015319",
+    "CQL_hopper_0.1": "CQL_hopper-medium-replay-v0_Generated_0.1_1_20240610032619",
+    "CQL_hopper_0.05": "CQL_hopper-medium-replay-v0_Generated_0.05_1_20240610015327",
+    "CQL_halfcheetah_0.1": "CQL_halfcheetah-medium-replay-v0_Generated_0.1_1_20240610033708",
+    "CQL_halfcheetah_0.05": "CQL_halfcheetah-medium-replay-v0_Generated_0.05_1_20240610015322",
+    "CQL_walker2d_0.1": "CQL_walker2d-medium-replay-v0_Generated_0.1_1_20240610033030",
+    "CQL_walker2d_0.05": "CQL_walker2d-medium-replay-v0_Generated_0.05_1_20240610015330",
+    "IQL_hopper_0.1": "IQL_hopper-medium-replay-v0_Generated_0.1_1_20240610022822",
+    "IQL_hopper_0.05": "IQL_hopper-medium-replay-v0_Generated_0.05_1_20240610015346",
+    "IQL_halfcheetah_0.1": "IQL_halfcheetah-medium-replay-v0_Generated_0.1_1_20240610022523",
+    "IQL_halfcheetah_0.05": "IQL_halfcheetah-medium-replay-v0_Generated_0.05_1_20240610015336",
+    "IQL_walker2d_0.1": "IQL_walker2d-medium-replay-v0_Generated_0.1_1_20240610021905",
+    "IQL_walker2d_0.05": "IQL_walker2d-medium-replay-v0_Generated_0.05_1_20240610015340",
+}
+
 def plot_environment_data(file_path: str, output_path: str):
     # 读取CSV文件，不使用列标签
     data = pd.read_csv(file_path, header=None)
@@ -129,8 +150,15 @@ def plot_environment_data(file_path: str, output_path: str):
 def calculate_average(file_path: str):
     data = pd.read_csv(file_path, header=None)
     scores = data[2]
-    last_50_scores = scores.tail(50)
-    average_score = last_50_scores.mean()
+    scores = scores.tail(10)
+    average_score = scores.mean()
+    return average_score
+
+def Calculate_average(file_path: str):
+    data = pd.read_csv(file_path, header=None)
+    scores = data[2]
+    scores = scores.nlargest(20).nsmallest(10)
+    average_score = scores.mean()
     return average_score
 
 def plot_graph(data, output_path):
@@ -154,6 +182,7 @@ def plot_graph(data, output_path):
 if __name__ == '__main__':
     # 记分，为每个算法单独画图
     score_sheet = {}
+    lstm_score_sheet = {}
     for algo in ["BCQ", "CQL", "IQL"]:
         for dataset in ["hopper", "halfcheetah", "walker2d"]:
             name = f"{algo}_{dataset}"
@@ -172,3 +201,13 @@ if __name__ == '__main__':
             name = f"{algo}_{dataset}"
             output_path = f"figures/{name}_comparison.png"
             plot_graph(score_sheet[name], output_path)
+
+            # 比较lstm效果
+            lstm_score_sheet[name] = [max(score_sheet[name])]
+            for keep_ratio in [0.05, 0.1]:
+                name = f"{algo}_{dataset}_{keep_ratio}"
+                file_path = f"d3rlpy_logs/{lstm_table[name]}/environment.csv"
+                #output_path = f"figures/lstm_generated/{name}.png"
+                #plot_environment_data(file_path, output_path)
+                lstm_score_sheet[f"{algo}_{dataset}"].append(Calculate_average(file_path))
+    print(lstm_score_sheet)
