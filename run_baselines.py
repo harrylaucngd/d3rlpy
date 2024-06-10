@@ -43,18 +43,12 @@ def run_experiment(env_name, algo_name):
         print(f"i: {i}")
         print(f"np.mean(episode.rewards): {np.mean(episode.rewards)}")
         mean_abs_reward = np.mean(np.abs(episode.rewards))
-        # for i in range(episode.size() - 1):
         next_observations = episode.observations[1:, :]
-        # print(f"next_observations: {next_observations.shape}")
         states_normalized = scaler.transform(next_observations)
-        # print(f"states_normalized: {states_normalized.shape}")
         log_density = kde.score_samples(states_normalized)
-        # print(f"log_density: {log_density.shape}")
         density = np.exp(log_density)
         pseudo_count = density * all_states.shape[0]
         exploration_bonus = 1.0 / (np.sqrt(pseudo_count) + epsilon)
-        # print(f"exploration_bonus: {exploration_bonus.shape}")
-        # print(f"episode.rewards: {episode.rewards.shape}")
         episode.rewards[:-1, :] += np.reshape(alpha * (exploration_bonus / 0.5 * mean_abs_reward), (-1, 1))
         print(f"np.mean(episode.rewards): {np.mean(episode.rewards)}")
 
