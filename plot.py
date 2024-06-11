@@ -107,24 +107,36 @@ reference_table = {
 }
 
 lstm_table = {
-    "BCQ_hopper_0.1": "BCQ_hopper-medium-replay-v0_Generated_0.1_1_20240610025611",
-    "BCQ_hopper_0.05": "BCQ_hopper-medium-replay-v0_Generated_0.05_1_20240610015315",
-    "BCQ_halfcheetah_0.1": "BCQ_halfcheetah-medium-replay-v0_Generated_0.1_1_20240610031052",
-    "BCQ_halfcheetah_0.05": "BCQ_halfcheetah-medium-replay-v0_Generated_0.05_1_20240610015311",
-    "BCQ_walker2d_0.1": "BCQ_walker2d-medium-replay-v0_Generated_0.1_1_20240610025710",
-    "BCQ_walker2d_0.05": "BCQ_walker2d-medium-replay-v0_Generated_0.05_1_20240610015319",
-    "CQL_hopper_0.1": "CQL_hopper-medium-replay-v0_Generated_0.1_1_20240610032619",
-    "CQL_hopper_0.05": "CQL_hopper-medium-replay-v0_Generated_0.05_1_20240610015327",
-    "CQL_halfcheetah_0.1": "CQL_halfcheetah-medium-replay-v0_Generated_0.1_1_20240610033708",
-    "CQL_halfcheetah_0.05": "CQL_halfcheetah-medium-replay-v0_Generated_0.05_1_20240610015322",
-    "CQL_walker2d_0.1": "CQL_walker2d-medium-replay-v0_Generated_0.1_1_20240610033030",
-    "CQL_walker2d_0.05": "CQL_walker2d-medium-replay-v0_Generated_0.05_1_20240610015330",
-    "IQL_hopper_0.1": "IQL_hopper-medium-replay-v0_Generated_0.1_1_20240610022822",
-    "IQL_hopper_0.05": "IQL_hopper-medium-replay-v0_Generated_0.05_1_20240610015346",
-    "IQL_halfcheetah_0.1": "IQL_halfcheetah-medium-replay-v0_Generated_0.1_1_20240610022523",
-    "IQL_halfcheetah_0.05": "IQL_halfcheetah-medium-replay-v0_Generated_0.05_1_20240610015336",
-    "IQL_walker2d_0.1": "IQL_walker2d-medium-replay-v0_Generated_0.1_1_20240610021905",
-    "IQL_walker2d_0.05": "IQL_walker2d-medium-replay-v0_Generated_0.05_1_20240610015340",
+    "BCQ_hopper_0.1": "BCQ_hopper-medium-replay-v0_Generated_0.1_1_20240610163024",
+    "BCQ_hopper_0.05": "BCQ_hopper-medium-replay-v0_Generated_0.05_1_20240610152459",
+    "BCQ_halfcheetah_0.1": "BCQ_halfcheetah-medium-replay-v0_Generated_0.1_1_20240610171007",
+    "BCQ_halfcheetah_0.05": "BCQ_halfcheetah-medium-replay-v0_Generated_0.05_1_20240610152451",
+    "BCQ_walker2d_0.1": "BCQ_walker2d-medium-replay-v0_Generated_0.1_1_20240610162715",
+    "BCQ_walker2d_0.05": "BCQ_walker2d-medium-replay-v0_Generated_0.05_1_20240610152506",
+    "CQL_hopper_0.1": "CQL_hopper-medium-replay-v0_Generated_0.1_1_20240610165536",
+    "CQL_hopper_0.05": "CQL_hopper-medium-replay-v0_Generated_0.05_1_20240610152524",
+    "CQL_halfcheetah_0.1": "CQL_halfcheetah-medium-replay-v0_Generated_0.1_1_20240610171219",
+    "CQL_halfcheetah_0.05": "CQL_halfcheetah-medium-replay-v0_Generated_0.05_1_20240610152515",
+    "CQL_walker2d_0.1": "CQL_walker2d-medium-replay-v0_Generated_0.1_1_20240610165226",
+    "CQL_walker2d_0.05": "CQL_walker2d-medium-replay-v0_Generated_0.05_1_20240610152534",
+    "IQL_hopper_0.1": "IQL_hopper-medium-replay-v0_Generated_0.1_1_20240610162314",
+    "IQL_hopper_0.05": "IQL_hopper-medium-replay-v0_Generated_0.05_1_20240610152610",
+    "IQL_halfcheetah_0.1": "IQL_halfcheetah-medium-replay-v0_Generated_0.1_1_20240610164625",
+    "IQL_halfcheetah_0.05": "IQL_halfcheetah-medium-replay-v0_Generated_0.05_1_20240610152548",
+    "IQL_walker2d_0.1": "IQL_walker2d-medium-replay-v0_Generated_0.1_1_20240610161947",
+    "IQL_walker2d_0.05": "IQL_walker2d-medium-replay-v0_Generated_0.05_1_20240610152555",
+}
+
+curiosity_table = {
+    "BCQ_hopper": "hopper_bcq_20240610210454",
+    "BCQ_halfcheetah": "halfcheetah_bcq_20240610202946",
+    "BCQ_walker2d": "walker2d_bcq_20240610202953",
+    "CQL_hopper": "hopper_cql_20240610210541",
+    "CQL_halfcheetah": "halfcheetah_cql_20240610202858",
+    "CQL_walker2d": "walker2d_cql_20240610202841",
+    "IQL_hopper": "hopper_iql_20240610210541",
+    "IQL_halfcheetah": "halfcheetah_iql_20240610202958",
+    "IQL_walker2d": "walker2d_iql_20240610203011",
 }
 
 def plot_environment_data(file_path: str, output_path: str):
@@ -157,18 +169,18 @@ def calculate_average(file_path: str):
 def Calculate_average(file_path: str):
     data = pd.read_csv(file_path, header=None)
     scores = data[2]
-    scores = scores.nlargest(20).nsmallest(10)
+    scores = scores.nlargest(20).nsmallest(15)
     average_score = scores.mean()
     return average_score
 
-def plot_graph(data, output_path):
+def plot_graph(data, output_path, name):
     line_height = data[0]
     line_values = data[1:]
     x_positions = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
     
     plt.figure(figsize=(10, 5))
-    plt.axhline(y=line_height, color='r', linestyle='--', label=f'Height: {line_height}')
-    plt.plot(x_positions, line_values, marker='o', label='Line Plot')
+    plt.axhline(y=line_height, color='r', linestyle='--', label=f'Baseline: {name}, {line_height}')
+    plt.plot(x_positions, line_values, marker='o', label='Primary Trimmed Results')
     
     plt.xlabel('Trimmed Ratios')
     plt.ylabel('Scores')
@@ -183,6 +195,7 @@ if __name__ == '__main__':
     # 记分，为每个算法单独画图
     score_sheet = {}
     lstm_score_sheet = {}
+    curiosity_score_sheet = {}
     for algo in ["BCQ", "CQL", "IQL"]:
         for dataset in ["hopper", "halfcheetah", "walker2d"]:
             name = f"{algo}_{dataset}"
@@ -200,14 +213,18 @@ if __name__ == '__main__':
             # 画算法对比图
             name = f"{algo}_{dataset}"
             output_path = f"figures/{name}_comparison.png"
-            plot_graph(score_sheet[name], output_path)
+            plot_graph(score_sheet[name], output_path, f"{algo}_{dataset}")
 
             # 比较lstm效果
             lstm_score_sheet[name] = [max(score_sheet[name])]
             for keep_ratio in [0.05, 0.1]:
                 name = f"{algo}_{dataset}_{keep_ratio}"
                 file_path = f"d3rlpy_logs/{lstm_table[name]}/environment.csv"
-                #output_path = f"figures/lstm_generated/{name}.png"
-                #plot_environment_data(file_path, output_path)
                 lstm_score_sheet[f"{algo}_{dataset}"].append(Calculate_average(file_path))
-    print(lstm_score_sheet)
+
+            # 比较curiosity效果
+            name = f"{algo}_{dataset}"
+            curiosity_score_sheet[name] = [score_sheet[name][0]]
+            name = f"{algo}_{dataset}"
+            file_path = f"d3rlpy_logs/{curiosity_table[name]}/environment.csv"
+            curiosity_score_sheet[f"{algo}_{dataset}"].append(Calculate_average(file_path))
